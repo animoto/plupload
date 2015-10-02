@@ -1569,10 +1569,19 @@ plupload.Uploader = function(options) {
 	}
 
 
-	function onCancelUpload() {
-		if (this.xhr) {
-			this.xhr.abort();
+	function onCancelUpload(up, file) {
+		if (!file) {
+			plupload.each(files, function(file) {
+				if (file.xhr) {
+					file.xhr.abort();
+				}
+			});
 		}
+
+		if (file.xhr) {
+			file.xhr.abort();
+		}
+
 	}
 
 
@@ -1599,7 +1608,7 @@ plupload.Uploader = function(options) {
 			// Upload next file but detach it from the error event
 			// since other custom listeners might want to stop the queue
 			if (up.state == plupload.STARTED) { // upload in progress
-				up.trigger('CancelUpload');
+				up.trigger('CancelUpload', err.file);
 				delay(function() {
 					uploadNext.call(up);
 				}, 1);
@@ -1659,7 +1668,8 @@ plupload.Uploader = function(options) {
 			crop: false
 		},
 		send_file_name: true,
-		send_chunk_number: true
+		send_chunk_number: true,
+		max_upload_slots: 1
 	};
 
 
