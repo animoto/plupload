@@ -902,8 +902,8 @@ plupload.Uploader = function(options) {
 	// Private methods
 	function uploadNext() {
 		var file,
-				numberUploads = 0,
-				maxSlots = this.getOption('max_upload_slots');
+		    numberUploads = 0,
+		    maxSlots = this.getOption('max_upload_slots');
 
 		if (this.state == plupload.STARTED) {
 			if (fileQueue.length === 0 && numberUploads === 0) {
