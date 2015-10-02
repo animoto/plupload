@@ -907,35 +907,34 @@ plupload.Uploader = function(options) {
 	, startTime
 	, total
 	, disabled = false
+	, fileQueue = []
 	;
 
 
 	// Private methods
 	function uploadNext() {
-		var file, count = 0, i;
+		var file,
+				numberUploads = 0,
+				maxSlots = this.getOption('max_upload_slots');
 
 		if (this.state == plupload.STARTED) {
-			// Find first QUEUED file
-			for (i = 0; i < files.length; i++) {
-				if (!file && files[i].status == plupload.QUEUED) {
-					file = files[i];
-					if (this.trigger("BeforeUpload", file)) {
-						file.status = plupload.UPLOADING;
-						this.trigger("UploadFile", file);
-					}
-				} else {
-					count++;
-				}
-			}
-
-			// All files are DONE or FAILED
-			if (count == files.length) {
+			if (fileQueue.length === 0 && numberUploads === 0) {
 				if (this.state !== plupload.STOPPED) {
 					this.state = plupload.STOPPED;
 					this.trigger("StateChanged");
 				}
 				this.trigger("UploadComplete", files);
 			}
+
+			while(numberUploads < maxSlots && fileQueue.length > 0) {
+				file = fileQueue.shift();
+				if (this.trigger("BeforeUpload", file)) {
+					file.status = plupload.UPLOADING;
+					this.trigger("UploadFile", file);
+				}
+				numberUploads++;
+			}
+
 		}
 	}
 
@@ -1588,6 +1587,7 @@ plupload.Uploader = function(options) {
 					file.xhr.abort();
 				}
 			});
+			return;
 		}
 
 		if (file.xhr) {
@@ -1992,6 +1992,7 @@ plupload.Uploader = function(options) {
 							if (!err) {
 								// make files available for the filters by updating the main queue directly
 								files.push(file);
+								fileQueue.push(file);
 								// collect the files that will be passed to FilesAdded event
 								filesAdded.push(file);
 
