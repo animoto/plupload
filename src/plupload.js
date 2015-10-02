@@ -1406,8 +1406,6 @@ plupload.Uploader = function(options) {
 				}
 			}
 
-			file.xhr = new o.XMLHttpRequest();
-
 			// Do we have upload progress support
 			if (file.xhr.upload) {
 				file.xhr.upload.onprogress = function(e) {
@@ -2252,7 +2250,9 @@ plupload.File = (function() {
 			 * @property lastModifiedDate
 			 * @type {String}
 			 */
-			lastModifiedDate: file.lastModifiedDate || (new Date()).toLocaleString(), // Thu Aug 23 2012 19:40:00 GMT+0400 (GET)
+			lastModifiedDate: file.lastModifiedDate || (new Date()).toLocaleString(), // Thu Aug 23 2012 19:40:00 GMT+0400 (GET).
+
+			xhr: new o.XMLHttpRequest(),
 
 			/**
 			 * Returns native window.File object, when it's available.
@@ -2287,9 +2287,6 @@ plupload.File = (function() {
 				var src = this.getSource();
 				if (src) {
 					src.destroy();
-					if (this.xhr) {
-						this.xhr = null;
-					}
 					delete filepool[this.id];
 				}
 			}
