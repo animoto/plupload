@@ -908,13 +908,13 @@ plupload.Uploader = function(options) {
 	, total
 	, disabled = false
 	, fileQueue = []
+	, numberUploads = 0
 	;
 
 
 	// Private methods
 	function uploadNext() {
 		var file,
-		    numberUploads = 0,
 		    maxSlots = this.getOption('max_upload_slots');
 
 		if (this.state == plupload.STARTED) {
@@ -1587,10 +1587,12 @@ plupload.Uploader = function(options) {
 					file.xhr.abort();
 				}
 			});
+			numberUploads = 0;
 			return;
 		}
 
 		if (file.xhr) {
+			numberUploads--;
 			file.xhr.abort();
 		}
 
@@ -1599,7 +1601,7 @@ plupload.Uploader = function(options) {
 
 	function onFileUploaded(up) {
 		calc();
-
+		numberUploads--;
 		// Upload next file but detach it from the error event
 		// since other custom listeners might want to stop the queue
 		delay(function() {
@@ -1620,6 +1622,7 @@ plupload.Uploader = function(options) {
 			// Upload next file but detach it from the error event
 			// since other custom listeners might want to stop the queue
 			if (up.state == plupload.STARTED) { // upload in progress
+				numberUploads--;
 				up.trigger('CancelUpload', err.file);
 				delay(function() {
 					uploadNext.call(up);
