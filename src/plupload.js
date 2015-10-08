@@ -895,32 +895,42 @@ plupload.Uploader = function(options) {
 	, startTime
 	, total
 	, disabled = false
-	, fileQueue = []
-	, numberUploads = 0
+	, activeUploads = new Collection()
 	;
-
 
 	// Private methods
 	function uploadNext() {
 		var file,
+		    up = this,
 		    maxSlots = this.getOption('max_upload_slots');
 
 		if (this.state == plupload.STARTED) {
-			if (fileQueue.length === 0 && numberUploads === 0) {
+			plupload.each(files, function(f) {
+				if (f.status == plupload.QUEUED) {
+					file = f;
+					return false;
+				}
+			});
+
+			if (activeUploads.length < maxSlots && file) {
+				if (this.trigger("BeforeUpload", file)) {
+					file.status = plupload.UPLOADING;
+					activeUploads.add(file.id, file);
+					this.trigger("UploadFile", file);
+				}
+				if (activeUploads.length < maxSlots) {
+					delay(function() {
+						uploadNext.call(up);
+					});
+				}
+			}
+
+			if (!activeUploads.length) {
 				if (this.state !== plupload.STOPPED) {
 					this.state = plupload.STOPPED;
 					this.trigger("StateChanged");
 				}
 				this.trigger("UploadComplete", files);
-			}
-
-			while(numberUploads < maxSlots && fileQueue.length > 0) {
-				file = fileQueue.shift();
-				if (this.trigger("BeforeUpload", file)) {
-					file.status = plupload.UPLOADING;
-					this.trigger("UploadFile", file);
-				}
-				numberUploads++;
 			}
 
 		}
@@ -1575,21 +1585,23 @@ plupload.Uploader = function(options) {
 					file.xhr.abort();
 				}
 			});
-			numberUploads = 0;
+
+			activeUploads.clear();
+
 			return;
 		}
 
 		if (file.xhr) {
-			numberUploads--;
 			file.xhr.abort();
+			activeUploads.remove(file.id);
 		}
 
 	}
 
 
-	function onFileUploaded(up) {
+	function onFileUploaded(up, file) {
+		activeUploads.remove(file.id);
 		calc();
-		numberUploads--;
 		// Upload next file but detach it from the error event
 		// since other custom listeners might want to stop the queue
 		delay(function() {
@@ -1610,7 +1622,6 @@ plupload.Uploader = function(options) {
 			// Upload next file but detach it from the error event
 			// since other custom listeners might want to stop the queue
 			if (up.state == plupload.STARTED) { // upload in progress
-				numberUploads--;
 				up.trigger('CancelUpload', err.file);
 				delay(function() {
 					uploadNext.call(up);
@@ -1647,6 +1658,8 @@ plupload.Uploader = function(options) {
 		disabled = false;
 		startTime = null;
 		total.reset();
+
+		activeUploads.clear();
 	}
 
 
@@ -1983,7 +1996,6 @@ plupload.Uploader = function(options) {
 							if (!err) {
 								// make files available for the filters by updating the main queue directly
 								files.push(file);
-								fileQueue.push(file);
 								// collect the files that will be passed to FilesAdded event
 								filesAdded.push(file);
 
@@ -2374,6 +2386,50 @@ plupload.File = (function() {
 	 */
 	self.reset = function() {
 		self.size = self.loaded = self.uploaded = self.failed = self.queued = self.percent = self.bytesPerSec = 0;
+	};
+};
+
+/**
+Helper collection class - in a way a mix of object and array
+@contsructor
+@class Collection
+@private
+*/
+var Collection = function() {
+	var registry = {};
+
+	this.length = 0;
+
+	this.get = function(key) {
+		return registry.hasOwnProperty(key) ? registry[key] : null;
+	};
+
+	this.add = function(key, obj) {
+		if (registry.hasOwnProperty(key)) {
+			return this.update.apply(this, arguments);
+		}
+		registry[key] = obj;
+		this.length++;
+	};
+
+	this.remove = function(key) {
+		if (registry.hasOwnProperty(key)) {
+			delete registry[key];
+			this.length--;
+		}
+	};
+
+	this.update = function(key, obj) {
+		registry[key] = obj;
+	};
+
+	this.each = function(cb) {
+		plupload.each(registry, cb);
+	};
+
+	this.clear = function() {
+		registry = {};
+		this.length = 0;
 	};
 };
 
