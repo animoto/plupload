@@ -1876,9 +1876,9 @@ plupload.Uploader = function(options) {
 			if (this.state != plupload.STARTED) {
 				this.state = plupload.STARTED;
 				this.trigger('StateChanged');
-
-				uploadNext.call(this);
 			}
+
+			uploadNext.call(this);
 		},
 
 		/**
